@@ -23,6 +23,15 @@ spring:
       password: 4Jd7eP6JBJjy
       database: 9
       timeout: 5000
+  ai:
+    openai:
+      base-url: https://api.openai.com/
+      api-key: hweuiofjqwopfjerjfewdc
+      chat:
+        option:
+          model: gpt-4.0-turbo
+          temperature: 0.7F
+          max-tokens: 100
 mybatis:
   type-aliases-package: com.blackfire.aicloud.provider.dao.entity
   mapper-locations: classpath:mapper/*.xml

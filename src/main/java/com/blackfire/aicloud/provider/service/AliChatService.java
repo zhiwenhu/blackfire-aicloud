@@ -75,7 +75,7 @@ public class AliChatService {
      * @param question
      * @return
      */
-    public Flux<String> callWithStream(String question, HttpServletResponse response) {
+    public Flux<String> callWithStream(String question) {
         Generation gen = new Generation();
         Message systemMsg = Message.builder()
                 .role(Role.SYSTEM.getValue())
@@ -90,7 +90,7 @@ public class AliChatService {
                 .model(model)
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .topP(0.8)
+                .topP(0.3)
                 .enableSearch(true)
                 .incrementalOutput(true)
                 .build();

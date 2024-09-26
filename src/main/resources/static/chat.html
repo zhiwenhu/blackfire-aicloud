@@ -55,9 +55,9 @@
             <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
             <ul class="layui-nav layui-nav-tree" lay-filter="test">
                 <li class="layui-nav-item layui-nav-itemed">
-                    <a class="" href="javascript:;">AI工具箱</a>
+                    <a href="javascript:;">AI工具箱</a>
                     <dl class="layui-nav-child">
-                        <dd><a href="javascript:;" lay-menu-show="aiChat">会话</a></dd>
+                        <dd id="chat-left-menu"><a href="javascript:;" lay-menu-show="aiChat">会话</a></dd>
                         <dd><a href="javascript:;" lay-menu-show="aiPhoto">图片</a></dd>
                     </dl>
                 </li>
@@ -73,8 +73,10 @@
                 这是一个 AI Chat 应用，请输入你想要查询的信息。
             </blockquote>
         </div>
+        <div style="padding: 15px; display: none" id="discussBody">
+        </div>
     </div>
-    <div class="layui-footer" style="height: 55px;line-height: 55px;vertical-align: center" >
+    <div id= "layout-footer" class="layui-footer" style="height: 55px;line-height: 55px;vertical-align: center" >
         <div class="layui-input-group" style="width: 90%;">
             <div class="layui-input-inline layui-input-wrap">
               <input id="questionText" class="layui-input" type="text" placeholder="输入你想问的问题" style="width: 100%;"/>
@@ -91,8 +93,8 @@
     var aiCloud = 1;
     // chat聊天地址Map
     const chatUrlMap = new Map();
-    chatUrlMap.set(1, '');
-    chatUrlMap.set(2, 'http://localhost:8090/blackfire/ali/stream');
+    chatUrlMap.set(1, 'chat/openai');
+    chatUrlMap.set(2, 'chat/ali/stream');
     chatUrlMap.set(3, '');
     chatUrlMap.set(4, '');
     const chatHistoryMap = new Map();
@@ -127,30 +129,32 @@
         // 左侧菜单选择
         util.event('lay-menu-show', {
             aiChat: function(){
-                $("#chatLayout").show();
-                $("#discussLayout").hide();
                 selectAi(aiCloud)
             },
             aiPhoto: function(){
-                $("#chatLayout").show();
-                $("#discussLayout").hide();
                 selectAi(aiCloud)
             },
             discuss : function(){
-                $("#chatLayout").hide();
-                $("#discussLayout").show();
                 initDiscuss();
             }
         });
 
         $('#sendButton').click(function () {
             let inputValue = jQuery("#questionText").val();
-            let question = '<div class="layui-card layui-panel" style="margin-bottom: auto"><div class="layui-card-body">' +
-                inputValue + '</div></div>';
-            $('#questionAndAnswer').append(question);
+            if (inputValue.trim() === '') {
+                layer.msg('请输入您想要查询的问题', {icon: 5, time: 2000});
+                $('#questionText').val('');
+                return;
+            }
+            let questionAnswer = document.createElement('div');
+            questionAnswer.classList.add("layui-card");
+            questionAnswer.classList.add("layui-panel");
+            questionAnswer.style.marginBottom = "auto"
+            questionAnswer.insertAdjacentHTML('afterbegin', '<div class="layui-card-header layui-font-16"><b>' + inputValue + '</b></div>');
+            $('#questionAndAnswer').append(questionAnswer);
             let newAnswerNode = document.createElement('div');
             newAnswerNode.classList.add("layui-card-body");
-            jQuery('#questionAndAnswer').append(newAnswerNode);
+            questionAnswer.append(newAnswerNode);
             let url = chatUrlMap.get(aiCloud);
             let body = {"question": inputValue}
             if (url != "") {
@@ -161,24 +165,40 @@
                         } else if (msg.type == "END") {
                             console.log("响应返回结束");
                         } else {
+                            node.innerHTML = msg.content;
                             console.log(msg);
                         }
                     }
                 })
             }
-            jQuery('#questionText').val("");
+            $('#questionText').val('');
         });
 
         // 讨论组信息查询初期化
         function initDiscuss() {
-
+            $("#chatLayout").hide();
+            $("#discussLayout").show();
+            $('#questionAndAnswer').hide();
+            $('#layout-footer').hide();
+            $('#discussBody').show();
+            if (!jQuery("#discussLayout").find("li").hasClass("layui-this")) {
+                jQuery("#discussLayout").find("li").eq(1).addClass("layui-this");
+            }
         }
 
         // 页面初期化
         window.onload = function () {
-
+            jQuery("#chatLayout").find("li").removeClass("layui-this");
+            jQuery("#chatLayout").find("li").eq(1).addClass("layui-this");
+            jQuery("#chat-left-menu").addClass("layui-this");
         }
         window.selectAi = function(type) {
+            $("#chatLayout").show();
+            $("#discussLayout").hide();
+            $('#questionAndAnswer').show();
+            $('#layout-footer').show();
+            $('#discussBody').hide();
+
             if (aiCloud != type) {
                 // 清除非本AI结果记录
                 var bodyElement = document.getElementById('questionAndAnswer');
@@ -197,6 +217,20 @@
             aiCloud = type;
         }
 
+        function isJson(str) {
+            if (typeof str == 'string') {
+                try {
+                    var obj=JSON.parse(str);
+                    if(typeof obj == 'object' && obj ){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                } catch(e) {
+                    return false;
+                }
+            }
+        }
         function callAiCloudSSE(url, body, node,  onMessage) {
             const decoder = new TextDecoder("utf-8");
             let buffer = '';
@@ -209,6 +243,15 @@
                         return;
                     }
                     buffer = decoder.decode(content.value, {stream: !content.done});
+                    if (isJson(buffer)) {
+                        if (JSON.parse(buffer).hasOwnProperty("msg") && JSON.parse(buffer).hasOwnProperty("code")) {
+                            onMessage(node, {
+                                type: "ERROR",
+                                content: JSON.parse(buffer).msg
+                            });
+                            return;
+                        }
+                    }
                     const lines = buffer.split('\n');
                     lines.forEach(line => {
                         if (line != "") {
