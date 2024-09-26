@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>黑火科技Ai Chat</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="layui/css/layui.css" rel="stylesheet">
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs layui-bg-black">AI Cloud</div>
+        <!-- 头部区域（可配合layui 已有的水平导航） -->
+        <ul id="chatLayout" class="layui-nav layui-layout-left">
+            <!-- 移动端显示 -->
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(1)"><a href="javascript:;">ChatGPT</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(2)"><a href="javascript:;">通义千问</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(3)"><a href="javascript:;">讯飞星火</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(4)"><a href="javascript:;">文心一言</a></li>
+        </ul>
+        <ul id="discussLayout" class="layui-nav layui-layout-left" style="display: none">
+            <!-- 移动端显示 -->
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+            <li class="layui-nav-item layui-hide-xs"><a href="javascript:;">推荐</a></li>
+            <li class="layui-nav-item layui-hide-xs"><a href="javascript:;">最新</a></li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-show-sm-inline-block">
+                <a href="javascript:;">
+                    <img src="//unpkg.com/outeres@0.0.10/img/layui/icon-v2.png" class="layui-nav-img">
+                    tester
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="javascript:;">Your Profile</a></dd>
+                    <dd><a href="javascript:;">Settings</a></dd>
+                    <dd><a href="javascript:;">Sign out</a></dd>
+                </dl>
+            </li>
+            <li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-more-vertical"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+            <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a class="" href="javascript:;">AI工具箱</a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="javascript:;" lay-menu-show="aiChat">会话</a></dd>
+                        <dd><a href="javascript:;" lay-menu-show="aiPhoto">图片</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item"><a href="javascript:;" lay-menu-show="discuss">话题讨论</a></li>
+                <li class="layui-nav-item"><a href="javascript:;" lay-menu-show="about">关于</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <!-- 内容主体区域 -->
+        <div style="padding: 15px 15px 55px;" id="questionAndAnswer" >
+            <blockquote class="layui-elem-quote layui-text">
+                这是一个 AI Chat 应用，请输入你想要查询的信息。
+            </blockquote>
+        </div>
+    </div>
+    <div class="layui-footer" style="height: 55px;line-height: 55px;vertical-align: center" >
+        <div class="layui-input-group" style="width: 90%;">
+            <div class="layui-input-inline layui-input-wrap">
+              <input id="questionText" class="layui-input" type="text" placeholder="输入你想问的问题" style="width: 100%;"/>
+            </div>
+            <div class="layui-input-suffix" style="margin-left: 10px;width: 40px" >
+                <button class="layui-btn layui-btn-normal layui-btn-radius" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="layui/layui.js"></script>
+<script>
+    var aiCloud = 1;
+    // chat聊天地址Map
+    const chatUrlMap = new Map();
+    chatUrlMap.set(1, '');
+    chatUrlMap.set(2, 'http://localhost:8090/blackfire/ali/stream');
+    chatUrlMap.set(3, '');
+    chatUrlMap.set(4, '');
+    const chatHistoryMap = new Map();
+    //JS
+    layui.use(['element', 'layer', 'util', 'jquery'], function(){
+        var element = layui.element;
+        var layer = layui.layer;
+        var util = layui.util;
+        var $ = layui.$;
+        var jQuery = layui.jquery;
+        //头部事件
+        util.event('lay-header-event', {
+            menuLeft: function(othis){ // 左侧菜单事件
+                layer.msg('展开左侧菜单的操作', {icon: 0});
+            },
+            menuRight: function(){  // 右侧菜单事件
+                layer.open({
+                    type: 1,
+                    title: '更多',
+                    content: '<div style="padding: 15px;" class="layui-icon-link"><a href="https://openai.com/chatgpt/" target="_blank" style="color:darkorange;">ChatGPT</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://tongyi.aliyun.com/qianwen/" target="_blank" style="color:#0d408e;">通义千问</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://xinghuo.xfyun.cn/" target="_blank" style="color:cadetblue;">讯飞星火</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://yiyan.baidu.com/welcome" target="_blank" style="color:chocolate;">文心一言</a></div>',
+                    area: ['260px', '100%'],
+                    offset: 'rt', // 右上角
+                    anim: 'slideLeft', // 从右侧抽屉滑出
+                    shadeClose: true,
+                    scrollbar: false
+                });
+            }
+        });
+        // 左侧菜单选择
+        util.event('lay-menu-show', {
+            aiChat: function(){
+                $("#chatLayout").show();
+                $("#discussLayout").hide();
+                selectAi(aiCloud)
+            },
+            aiPhoto: function(){
+                $("#chatLayout").show();
+                $("#discussLayout").hide();
+                selectAi(aiCloud)
+            },
+            discuss : function(){
+                $("#chatLayout").hide();
+                $("#discussLayout").show();
+                initDiscuss();
+            }
+        });
+
+        $('#sendButton').click(function () {
+            let inputValue = jQuery("#questionText").val();
+            let question = '<div class="layui-card layui-panel" style="margin-bottom: auto"><div class="layui-card-body">' +
+                inputValue + '</div></div>';
+            $('#questionAndAnswer').append(question);
+            let newAnswerNode = document.createElement('div');
+            newAnswerNode.classList.add("layui-card-body");
+            jQuery('#questionAndAnswer').append(newAnswerNode);
+            let url = chatUrlMap.get(aiCloud);
+            let body = {"question": inputValue}
+            if (url != "") {
+                callAiCloudSSE(url, body, newAnswerNode, (node, msg) => {
+                    if (typeof msg.type != "undefined") {
+                        if (msg.type == "DATA") {
+                            node.innerHTML += msg.content;
+                        } else if (msg.type == "END") {
+                            console.log("响应返回结束");
+                        } else {
+                            console.log(msg);
+                        }
+                    }
+                })
+            }
+            jQuery('#questionText').val("");
+        });
+
+        // 讨论组信息查询初期化
+        function initDiscuss() {
+
+        }
+
+        // 页面初期化
+        window.onload = function () {
+
+        }
+        window.selectAi = function(type) {
+            if (aiCloud != type) {
+                // 清除非本AI结果记录
+                var bodyElement = document.getElementById('questionAndAnswer');
+                var firstNode = bodyElement.firstElementChild;
+                // 历史记录保存
+                chatHistoryMap.set(aiCloud, bodyElement.innerHTML);
+
+                bodyElement.innerHTML = "";
+                // 历史记录还原
+                if (chatHistoryMap.has(type))  {
+                    bodyElement.innerHTML = chatHistoryMap.get(type);
+                } else {
+                    bodyElement.append(firstNode);
+                }
+            }
+            aiCloud = type;
+        }
+
+        function callAiCloudSSE(url, body, node,  onMessage) {
+            const decoder = new TextDecoder("utf-8");
+            let buffer = '';
+            const processMessage = (reader) => {
+                reader.read().then(content => {
+                    if (content.done) {
+                        onMessage(node, {
+                            type: "END"
+                        });
+                        return;
+                    }
+                    buffer = decoder.decode(content.value, {stream: !content.done});
+                    const lines = buffer.split('\n');
+                    lines.forEach(line => {
+                        if (line != "") {
+                            let [type] = line.split(":", 1);
+                            let subContent = line.substring(type.length + 1);
+                            if (type == 'data') {
+                                onMessage(node, {
+                                    type: "DATA",
+                                    content: subContent.trim()
+                                });
+                            } else if (type == '' && subContent != '') { //服务端发送的注释，用于保证链接不断开
+                                onMessage({
+                                    type: "COMMENT",
+                                    content: subContent.trim()
+                                });
+                            }
+                        }
+                    });
+
+                    if (!content.done) {
+                        processMessage(reader);
+                    }
+                })
+            }
+            fetch(`${url}`, {
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                method: "POST",
+                body: JSON.stringify(body)
+            })
+                .then(response => response.body.getReader())
+                .then(reader => processMessage(reader))
+                .catch(error => onMessage(node, {
+                    type: "ERROR",
+                    content: error
+                }));
+        }
+    });
+</script>
+</body>
+</html>
