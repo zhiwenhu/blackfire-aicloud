@@ -31,7 +31,7 @@ spring:
         option:
           model: gpt-4.0-turbo
           temperature: 0.7F
-          max-tokens: 100
+          max-tokens: 200
 mybatis:
   type-aliases-package: com.blackfire.aicloud.provider.dao.entity
   mapper-locations: classpath:mapper/*.xml
@@ -51,3 +51,15 @@ ai:
     api-key: sk-170754a2f178474d9d2a223b63c88715
     model: qwen-turbo
     stream: false
+  openai:
+    base-url: https://api.openai.com/
+    api-key: hweuiofjqwopfjerjfewdc
+    chat:
+      option:
+        model: gpt-4.0-turbo
+  xunfei:
+    base-url: https://spark-api-open.xf-yun.com/v1/chat/completions
+    api-key: vqWkutlnzljSflBuivZK:TvhUlglKolYeKoMxskYq
+    chat:
+      option:
+        model: Spark Max

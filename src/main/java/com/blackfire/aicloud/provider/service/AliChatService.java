@@ -57,6 +57,7 @@ public class AliChatService {
                     .model(model)
                     .messages(Arrays.asList(systemMsg, userMsg))
                     .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+                    .maxTokens(200)
                     .build();
             GenerationResult result = gen.call(param);
             List<GenerationOutput.Choice> array = result.getOutput().getChoices();
@@ -90,7 +91,8 @@ public class AliChatService {
                 .model(model)
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .topP(0.3)
+                .topP(0.7)
+                .maxTokens(200)
                 .enableSearch(true)
                 .incrementalOutput(true)
                 .build();

@@ -42,7 +42,15 @@ public class AiChatController extends AbstractController{
     @PostMapping(value = "/openai", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatOpenaiStream(@RequestBody ChatBody quest){
         if (StringUtils.hasLength(quest.getQuestion())) {
-            return openaiService.callWithStream(quest.getQuestion());
+            return openaiService.callOpenAi(quest.getQuestion());
+        }
+        throw new BusinessException("请输入你的问题。");
+    }
+
+    @PostMapping(value = "/xunfei", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatXunfeiStream(@RequestBody ChatBody quest){
+        if (StringUtils.hasLength(quest.getQuestion())) {
+            return openaiService.callXunfei(quest.getQuestion());
         }
         throw new BusinessException("请输入你的问题。");
     }
