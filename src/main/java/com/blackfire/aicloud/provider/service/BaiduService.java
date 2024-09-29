@@ -28,6 +28,7 @@ import reactor.core.publisher.Flux;
 
 import java.net.Proxy;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -39,7 +40,7 @@ public class BaiduService {
     /**
      * ERNIE_BOT_TURBO 发起会话接口
      */
-    private static final String ERNIE_BOT_TURBO_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant?access_token=";
+    private static final String ERNIE_BOT_TURBO_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie_speed?access_token=";
 
     private OkHttpClient okHttpClient;
     @Value("${ai.baidu.api-key}")
@@ -104,15 +105,11 @@ public class BaiduService {
             throw new BusinessException("参数异常：EventSourceListener不能为空");
         }
         ErnieBotTurboStreamParam param = new ErnieBotTurboStreamParam();
-        BaiduChatMessage systemMsg = BaiduChatMessage.builder()
-                .role(Role.SYSTEM.getValue())
-                .content("You are a helpful assistant.")
-                .build();
         BaiduChatMessage userMsg = BaiduChatMessage.builder()
                 .role(Role.USER.getValue())
                 .content(question)
                 .build();
-        param.setMessages(Arrays.asList(systemMsg, userMsg));
+        param.setMessages(Collections.singletonList(userMsg));
         param.setStream(true);
         try {
             EventSource.Factory factory = EventSources.createFactory(this.okHttpClient);
@@ -120,6 +117,7 @@ public class BaiduService {
             String requestBody = mapper.writeValueAsString(param);
             Request request = new Request.Builder()
                     .url(ERNIE_BOT_TURBO_INSTANT + getToken(appKey, secretKey))
+                    .addHeader("Content-Type", "application/json")
                     .post(RequestBody.create(MediaType.parse(ContentType.JSON.getValue()), requestBody))
                     .build();
             //创建事件

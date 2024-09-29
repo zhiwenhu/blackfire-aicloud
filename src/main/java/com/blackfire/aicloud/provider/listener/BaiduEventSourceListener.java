@@ -1,5 +1,6 @@
 package com.blackfire.aicloud.provider.listener;
 
+import com.blackfire.aicloud.common.exception.BusinessException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.SneakyThrows;
@@ -21,25 +22,24 @@ public class BaiduEventSourceListener extends EventSourceListener {
 
     public BaiduEventSourceListener(HttpServletResponse response) {
         this.rp = response;
+        this.rp.setStatus(200);
+        this.rp.setContentType("text/event-stream");
+        this.rp.setCharacterEncoding("UTF-8");
+        this.rp.setHeader("Cache-Control", "no-cache");
+        this.rp.setHeader("connection", "keep-alive");
+        this.rp.setHeader("Access-Control-Allow-Origin", "*");  // 允许跨域
     }
+
     @Override
     public void onOpen(EventSource eventSource, Response response) {
-        if (rp != null) {
-            // 设置响应头
-            rp.setStatus(200);
-            rp.setContentType("text/event-stream");
-            rp.setCharacterEncoding("UTF-8");
-            rp.setHeader("Cache-Control", "no-cache");
-            rp.setHeader("onnection", "keep-alive");
-            log.info("建立baidu sse连接...");
-        }
+        log.info("建立baidu sse连接...");
     }
 
     @Override
     public void onEvent(EventSource eventSource, String id, String type, String data) {
         try {
             output.append(data);
-            if ( rp != null) {
+            if (rp != null) {
                 if ("\n".equals(data)) {
                     rp.getWriter().write("data:\n\n");
                     rp.getWriter().flush();
@@ -60,7 +60,7 @@ public class BaiduEventSourceListener extends EventSourceListener {
     @SneakyThrows
     @Override
     public void onFailure(EventSource eventSource, Throwable t, Response response) {
-        if(Objects.isNull(response)){
+        if (Objects.isNull(response)) {
             log.error("baidu  sse连接异常:", t);
             eventSource.cancel();
             return;

@@ -65,7 +65,8 @@ public class AiChatController extends AbstractController{
         if (StringUtils.hasLength(quest.getQuestion())) {
             BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
             baiduService.ernieBotTurboStream(quest.getQuestion(), listener);
+        } else {
+            throw new BusinessException("请输入你的问题。");
         }
-        throw new BusinessException("请输入你的问题。");
     }
 }
