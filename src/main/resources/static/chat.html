@@ -96,7 +96,7 @@
     chatUrlMap.set(1, 'chat/openai');
     chatUrlMap.set(2, 'chat/ali/stream');
     chatUrlMap.set(3, 'chat/xunfei');
-    chatUrlMap.set(4, '');
+    chatUrlMap.set(4, 'chat/baidu');
     const chatHistoryMap = new Map();
     //JS
     layui.use(['element', 'layer', 'util', 'jquery'], function(){
@@ -165,7 +165,7 @@
                         } else if (msg.type == "END") {
                             console.log("响应返回结束");
                         } else {
-                            node.innerHTML = msg.content;
+                            node.innerHTML += msg.content;
                             console.log(msg);
                         }
                     }
@@ -252,22 +252,36 @@
                             return;
                         }
                     }
-                    const lines = buffer.split('\n');
+                    console.log(buffer);
+                    const lines = buffer.split('\\n');
                     lines.forEach(line => {
                         if (line != "") {
-                            let [type] = line.split(":", 1);
-                            let subContent = line.substring(type.length + 1);
-                            if (type == 'data') {
+                            if (line.indexOf(":") > 0) {
+                                let [type] = line.split(":", 1);
+                                let subContent = line.substring(type.length + 1);
+                                if (type == 'data' && subContent != '') {
+                                    onMessage(node, {
+                                        type: "DATA",
+                                        content: subContent
+                                    });
+                                } else if (type == '' && subContent != '') { //服务端发送的注释，用于保证链接不断开
+                                    onMessage({
+                                        type: "COMMENT",
+                                        content: subContent
+                                    });
+                                }
+                            } else { // 默认分行输出的内容 直接设定type为DATA
                                 onMessage(node, {
                                     type: "DATA",
-                                    content: subContent.trim()
-                                });
-                            } else if (type == '' && subContent != '') { //服务端发送的注释，用于保证链接不断开
-                                onMessage({
-                                    type: "COMMENT",
-                                    content: subContent.trim()
+                                    content: line
                                 });
                             }
+                        } else {
+                            // 空行表示有换行
+                            onMessage(node, {
+                                type: "DATA",
+                                content: "<br>"
+                            });
                         }
                     });
 

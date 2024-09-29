@@ -58,8 +58,12 @@ ai:
       option:
         model: gpt-4.0-turbo
   xunfei:
-    base-url: https://spark-api-open.xf-yun.com/v1/chat/completions
+    base-url: https://spark-api-open.xf-yun.com
     api-key: vqWkutlnzljSflBuivZK:TvhUlglKolYeKoMxskYq
     chat:
       option:
-        model: Spark Max
+        model: generalv3.5
+#        model: generalv3
+  baidu:
+    api-key: 1ZRbMiGWaO2yFKFoLcxRMO4M
+    secret: 4fd1UDVuExWBpAgNnH1iuHZzO6JaZz48
