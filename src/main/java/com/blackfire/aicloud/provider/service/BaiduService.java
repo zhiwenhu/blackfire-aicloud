@@ -10,6 +10,7 @@ import com.blackfire.aicloud.provider.domain.Token;
 import com.blackfire.aicloud.provider.domain.req.BaiduChatMessage;
 import com.blackfire.aicloud.provider.domain.req.ErnieBotTurboStreamParam;
 import com.blackfire.aicloud.provider.domain.resp.ErnieBotTurboResponse;
+import com.blackfire.aicloud.provider.listener.BaiduEventSourceListener;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -62,25 +63,24 @@ public class BaiduService {
     }
 
     public BaiduService() {
-        this.okHttpClient(30, 30, 30, null);
+        this.okHttpClient(30, 30, 30);
     }
 
-    public BaiduService(@NonNull String appKey, @NonNull String secretKey, long connectTimeout, long writeTimeout, long readTimeout, Proxy proxy) {
+    public BaiduService(@NonNull String appKey, @NonNull String secretKey, long connectTimeout, long writeTimeout, long readTimeout) {
         this.appKey = appKey;
         this.secretKey = secretKey;
-        this.okHttpClient(connectTimeout, writeTimeout, readTimeout, proxy);
+        this.okHttpClient(connectTimeout, writeTimeout, readTimeout);
     }
 
 
-    private void okHttpClient(long connectTimeout, long writeTimeout, long readTimeout, Proxy proxy) {
+    private void okHttpClient(long connectTimeout, long writeTimeout, long readTimeout) {
         OkHttpClient.Builder client = new OkHttpClient.Builder();
         client.connectTimeout(connectTimeout, TimeUnit.SECONDS);
         client.writeTimeout(writeTimeout, TimeUnit.SECONDS);
         client.readTimeout(readTimeout, TimeUnit.SECONDS);
-        if (Objects.nonNull(proxy)) {
-            client.proxy(proxy);
-        }
         this.okHttpClient = client.build();
+        okHttpClient.dispatcher().setMaxRequestsPerHost(200);
+        okHttpClient.dispatcher().setMaxRequests(200);
     }
 
     // 该方法是同步请求API，会等大模型将数据完全生成之后，返回响应结果，可能需要等待较长时间，视生成文本长度而定
@@ -99,7 +99,7 @@ public class BaiduService {
     // 该方法是通过流的方式请求API，大模型每生成一些字符，就会通过流的方式相应给客户端，
     // 我们是在 BaiduEventSourceListener.java 的 onEvent 方法中获取大模型响应的数据，其中data就是具体的数据，
     // 我们获取到数据之后，就可以通过 SSE/webscocket 的方式实时相应给前端页面展示
-    public void ernieBotTurboStream(String question, EventSourceListener eventSourceListener) {
+    public void ernieBotTurboStream(String question, BaiduEventSourceListener eventSourceListener) {
         if (Objects.isNull(eventSourceListener)) {
             log.error("参数异常：EventSourceListener不能为空");
             throw new BusinessException("参数异常：EventSourceListener不能为空");
@@ -117,14 +117,16 @@ public class BaiduService {
             String requestBody = mapper.writeValueAsString(param);
             Request request = new Request.Builder()
                     .url(ERNIE_BOT_TURBO_INSTANT + getToken(appKey, secretKey))
-                    .addHeader("Content-Type", "application/json")
                     .post(RequestBody.create(MediaType.parse(ContentType.JSON.getValue()), requestBody))
                     .build();
             //创建事件
             factory.newEventSource(request, eventSourceListener);
+            eventSourceListener.getCountDownLatch().await();
         } catch (JsonProcessingException e) {
             log.error("请求参数解析是失败！", e);
             throw new RuntimeException("请求参数解析是失败！", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 }
