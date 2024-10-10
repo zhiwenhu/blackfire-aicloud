@@ -66,7 +66,7 @@
             </ul>
         </div>
     </div>
-    <div class="layui-body">
+    <div class="layui-body" id="main-body">
         <!-- 内容主体区域 -->
         <div style="padding: 15px 15px 55px;" id="questionAndAnswer" >
             <blockquote class="layui-elem-quote layui-text">
@@ -78,8 +78,25 @@
     </div>
     <div id= "layout-footer" class="layui-footer" style="height: 55px;line-height: 55px;vertical-align: center" >
         <div class="layui-input-group" style="width: 90%;">
+            <div style="width: 140px">
+                <select class="layui-select"  id="model-select1" style="width: fit-content" >
+                    <option value="gpt-4.0-turbo">gpt-4.0-turbo</option>
+                </select>
+                <select class="layui-select" id="model-select2" style="width: fit-content; display: none" >
+                    <option value="qwen-turbo">qwen-turbo</option>
+                </select>
+                <select class="layui-select" id="model-select3" style="width: fit-content; display: none" >
+                    <option value="generalv3.5">generalv3.5</option>
+                </select>
+                <select class="layui-select" id="model-select4" style="width: fit-content; display: none" >
+                    <option value="">选择数据模型</option>
+                    <option value="ernie-speed-128k">ernie-speed-128k</option>
+                    <option value="yi_34b_chat">yi_34b_chat</option>
+                    <option value="ernie-lite-8k">ernie-lite-8k</option>
+                </select>
+            </div>
             <div class="layui-input-inline layui-input-wrap">
-              <input id="questionText" class="layui-input" type="text" placeholder="输入你想问的问题" style="width: 100%;"/>
+                <input id="questionText" class="layui-input" type="text" placeholder="输入你想问的问题" style="width: 100%;"/>
             </div>
             <div class="layui-input-suffix" style="margin-left: 10px;width: 40px" >
                 <button class="layui-btn layui-btn-normal layui-btn-radius" id="sendButton">Send</button>
@@ -100,7 +117,7 @@
     const chatHistoryMap = new Map();
     //JS
     layui.use(['element', 'layer', 'util', 'jquery'], function(){
-        var element = layui.element;
+        var form = layui.form;
         var layer = layui.layer;
         var util = layui.util;
         var $ = layui.$;
@@ -169,9 +186,11 @@
                             console.log(msg);
                         }
                     }
+                    scrollBottom();
                 })
             }
             $('#questionText').val('');
+            $('#questionText').focus();
         });
 
         // 讨论组信息查询初期化
@@ -191,6 +210,12 @@
             jQuery("#chatLayout").find("li").removeClass("layui-this");
             jQuery("#chatLayout").find("li").eq(1).addClass("layui-this");
             jQuery("#chat-left-menu").addClass("layui-this");
+            jQuery("#questionText").bind('keydown', function (e) {
+                let keyCode = e.keyCode || e.which || e.code || e.charCode;
+                if (keyCode == 13) {
+                    $('#sendButton').click();
+                }
+            });
         }
         window.selectAi = function(type) {
             $("#chatLayout").show();
@@ -215,6 +240,23 @@
                 }
             }
             aiCloud = type;
+            modelList();
+        }
+
+        function modelList() {
+            $("#model-select1").hide();
+            $("#model-select2").hide();
+            $("#model-select3").hide();
+            $("#model-select4").hide();
+            if (aiCloud == 1) {
+                $("#model-select1").show();
+            } else if (aiCloud == 2) {
+                $("#model-select2").show();
+            } else if (aiCloud == 3) {
+                $("#model-select3").show();
+            } else if (aiCloud == 4) {
+                $("#model-select4").show();
+            }
         }
 
         function isJson(str) {
@@ -280,7 +322,7 @@
                             // 空行表示有换行
                             onMessage(node, {
                                 type: "DATA",
-                                content: "<br>"
+                                content: "<br/>"
                             });
                         }
                     });
@@ -303,6 +345,18 @@
                     type: "ERROR",
                     content: error
                 }));
+        }
+
+        function scrollBottom() {
+            (function smoothscroll() {
+                const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+                const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+                const scrollHeight = document.documentElement.scrollHeight; // 总高度
+                if (scrollHeight - 10 > currentScroll + clientHeight) {
+                    window.requestAnimationFrame(smoothscroll);
+                    window.scrollTo(0, scrollHeight - clientHeight);
+                }
+            })();
         }
     });
 </script>

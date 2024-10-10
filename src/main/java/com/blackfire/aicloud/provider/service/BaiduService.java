@@ -41,7 +41,9 @@ public class BaiduService {
     /**
      * ERNIE_BOT_TURBO 发起会话接口
      */
-    private static final String ERNIE_BOT_TURBO_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie_speed?access_token=";
+    private static final String ERNIE_SPEED_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=";
+    private static final String YI34B_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/yi_34b_chat?access_token=";
+    private static final String ERNIE_LITE_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-lite-8k?access_token=";
 
     private OkHttpClient okHttpClient;
     @Value("${ai.baidu.api-key}")
@@ -92,7 +94,7 @@ public class BaiduService {
         if (param.isStream()) {
             param.setStream(false);
         }
-        String post = HttpUtil.post(ERNIE_BOT_TURBO_INSTANT + getToken(appKey, secretKey), JSONUtil.toJsonStr(param));
+        String post = HttpUtil.post(ERNIE_SPEED_INSTANT + getToken(appKey, secretKey), JSONUtil.toJsonStr(param));
         return JSONUtil.toBean(post, ErnieBotTurboResponse.class);
     }
 
@@ -116,7 +118,7 @@ public class BaiduService {
             ObjectMapper mapper = new ObjectMapper();
             String requestBody = mapper.writeValueAsString(param);
             Request request = new Request.Builder()
-                    .url(ERNIE_BOT_TURBO_INSTANT + getToken(appKey, secretKey))
+                    .url(ERNIE_SPEED_INSTANT + getToken(appKey, secretKey))
                     .post(RequestBody.create(MediaType.parse(ContentType.JSON.getValue()), requestBody))
                     .build();
             //创建事件
