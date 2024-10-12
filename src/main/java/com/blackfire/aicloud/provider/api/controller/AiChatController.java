@@ -2,7 +2,7 @@ package com.blackfire.aicloud.provider.api.controller;
 
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.blackfire.aicloud.common.exception.BusinessException;
-import com.blackfire.aicloud.provider.domain.req.ChatBody;
+import com.blackfire.aicloud.provider.domain.req.ChatRequest;
 import com.blackfire.aicloud.provider.domain.resp.GatewayResp;
 import com.blackfire.aicloud.provider.listener.BaiduEventSourceListener;
 import com.blackfire.aicloud.provider.service.AliChatService;
@@ -11,6 +11,7 @@ import com.blackfire.aicloud.provider.service.OpenaiService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +30,7 @@ public class AiChatController extends AbstractController{
     private BaiduService baiduService;
 
     @PostMapping("/ali")
-    public GatewayResp chatAliMessage(@RequestBody ChatBody quest){
+    public GatewayResp chatAliMessage(@RequestBody ChatRequest quest){
         if (StringUtils.hasLength(quest.getQuestion())) {
             return GatewayResp.ok(aliChatService.callWithMessage(quest.getQuestion()));
         }
@@ -37,7 +38,7 @@ public class AiChatController extends AbstractController{
     }
 
     @PostMapping(value = "/ali/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatAliStream(@RequestBody ChatBody quest){
+    public Flux<String> chatAliStream(@RequestBody ChatRequest quest){
         if (StringUtils.hasLength(quest.getQuestion())) {
             return aliChatService.callWithStream(quest.getQuestion());
         }
@@ -45,7 +46,7 @@ public class AiChatController extends AbstractController{
     }
 
     @PostMapping(value = "/openai", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatOpenaiStream(@RequestBody ChatBody quest){
+    public Flux<String> chatOpenaiStream(@RequestBody ChatRequest quest){
         if (StringUtils.hasLength(quest.getQuestion())) {
             return openaiService.callOpenGPT(quest.getQuestion());
         }
@@ -53,7 +54,7 @@ public class AiChatController extends AbstractController{
     }
 
     @PostMapping(value = "/xunfei", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatXunfeiStream(@RequestBody ChatBody quest){
+    public Flux<String> chatXunfeiStream(@RequestBody ChatRequest quest){
         if (StringUtils.hasLength(quest.getQuestion())) {
             return openaiService.callXunfei(quest.getQuestion());
         }
@@ -61,10 +62,10 @@ public class AiChatController extends AbstractController{
     }
 
     @PostMapping(value = "/baidu", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public void baiduStream(@RequestBody ChatBody quest, HttpServletResponse rp){
+    public void baiduStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
         if (StringUtils.hasLength(quest.getQuestion())) {
             BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
-            baiduService.ernieBotTurboStream(quest.getQuestion(), listener);
+            baiduService.ernieBotTurboStream(quest, listener);
         } else {
             throw new BusinessException("请输入你的问题。");
         }

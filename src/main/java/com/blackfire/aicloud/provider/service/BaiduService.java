@@ -5,9 +5,11 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.common.Role;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.blackfire.aicloud.common.exception.BusinessException;
 import com.blackfire.aicloud.provider.domain.Token;
 import com.blackfire.aicloud.provider.domain.req.BaiduChatMessage;
+import com.blackfire.aicloud.provider.domain.req.ChatRequest;
 import com.blackfire.aicloud.provider.domain.req.ErnieBotTurboStreamParam;
 import com.blackfire.aicloud.provider.domain.resp.ErnieBotTurboResponse;
 import com.blackfire.aicloud.provider.listener.BaiduEventSourceListener;
@@ -41,6 +43,7 @@ public class BaiduService {
     /**
      * ERNIE_BOT_TURBO 发起会话接口
      */
+    private static final String AI_CHAT_URL = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/{model}?access_token=";
     private static final String ERNIE_SPEED_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=";
     private static final String YI34B_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/yi_34b_chat?access_token=";
     private static final String ERNIE_LITE_INSTANT = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-lite-8k?access_token=";
@@ -86,7 +89,7 @@ public class BaiduService {
     }
 
     // 该方法是同步请求API，会等大模型将数据完全生成之后，返回响应结果，可能需要等待较长时间，视生成文本长度而定
-    public ErnieBotTurboResponse ernieBotTurbo(ErnieBotTurboStreamParam param) {
+    public ErnieBotTurboResponse ernieBotTurbo(ChatRequest question, ErnieBotTurboStreamParam param) {
         if (param == null) {
             log.error("参数异常：param不能为空");
             throw new RuntimeException("参数异常：param不能为空");
@@ -94,14 +97,18 @@ public class BaiduService {
         if (param.isStream()) {
             param.setStream(false);
         }
-        String post = HttpUtil.post(ERNIE_SPEED_INSTANT + getToken(appKey, secretKey), JSONUtil.toJsonStr(param));
+        String requestUrl = ERNIE_SPEED_INSTANT;
+        if (StringUtils.isNotBlank(question.getModel())) {
+            requestUrl = AI_CHAT_URL.replace("{model}", question.getModel());
+        }
+        String post = HttpUtil.post(requestUrl + getToken(appKey, secretKey), JSONUtil.toJsonStr(param));
         return JSONUtil.toBean(post, ErnieBotTurboResponse.class);
     }
 
     // 该方法是通过流的方式请求API，大模型每生成一些字符，就会通过流的方式相应给客户端，
     // 我们是在 BaiduEventSourceListener.java 的 onEvent 方法中获取大模型响应的数据，其中data就是具体的数据，
     // 我们获取到数据之后，就可以通过 SSE/webscocket 的方式实时相应给前端页面展示
-    public void ernieBotTurboStream(String question, BaiduEventSourceListener eventSourceListener) {
+    public void ernieBotTurboStream(ChatRequest question, BaiduEventSourceListener eventSourceListener) {
         if (Objects.isNull(eventSourceListener)) {
             log.error("参数异常：EventSourceListener不能为空");
             throw new BusinessException("参数异常：EventSourceListener不能为空");
@@ -109,7 +116,7 @@ public class BaiduService {
         ErnieBotTurboStreamParam param = new ErnieBotTurboStreamParam();
         BaiduChatMessage userMsg = BaiduChatMessage.builder()
                 .role(Role.USER.getValue())
-                .content(question)
+                .content(question.getQuestion())
                 .build();
         param.setMessages(Collections.singletonList(userMsg));
         param.setStream(true);
@@ -117,8 +124,13 @@ public class BaiduService {
             EventSource.Factory factory = EventSources.createFactory(this.okHttpClient);
             ObjectMapper mapper = new ObjectMapper();
             String requestBody = mapper.writeValueAsString(param);
+            String requestUrl = ERNIE_SPEED_INSTANT;
+            if (StringUtils.isNotBlank(question.getModel())) {
+                requestUrl = AI_CHAT_URL.replace("{model}", question.getModel());
+            }
+            log.info("请求大数据AI url：{}", requestUrl);
             Request request = new Request.Builder()
-                    .url(ERNIE_SPEED_INSTANT + getToken(appKey, secretKey))
+                    .url(requestUrl + getToken(appKey, secretKey))
                     .post(RequestBody.create(MediaType.parse(ContentType.JSON.getValue()), requestBody))
                     .build();
             //创建事件

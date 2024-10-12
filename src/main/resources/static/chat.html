@@ -7,6 +7,14 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="layui/css/layui.css" rel="stylesheet">
+    <style>
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ccc;
+            overflow-x: auto; /* 允许横向滚动 */
+        }
+    </style>
 </head>
 <body>
 <div class="layui-layout layui-layout-admin">
@@ -89,7 +97,6 @@
                     <option value="generalv3.5">generalv3.5</option>
                 </select>
                 <select class="layui-select" id="model-select4" style="width: fit-content; display: none" >
-                    <option value="">选择数据模型</option>
                     <option value="ernie-speed-128k">ernie-speed-128k</option>
                     <option value="yi_34b_chat">yi_34b_chat</option>
                     <option value="ernie-lite-8k">ernie-lite-8k</option>
@@ -122,6 +129,12 @@
         var util = layui.util;
         var $ = layui.$;
         var jQuery = layui.jquery;
+        const codeBlockStart = /^```([\w\s]+)/g;
+        const codeBlockEnd = /```$/g;
+        const innerCodeStart = `<code class="inline">`;
+        const innerCodeEnd = `</code>`;
+        const innerCodeBlock = /`[^`]*/;
+        let innerStart = 0;
         //头部事件
         util.event('lay-header-event', {
             menuLeft: function(othis){ // 左侧菜单事件
@@ -173,12 +186,49 @@
             newAnswerNode.classList.add("layui-card-body");
             questionAnswer.append(newAnswerNode);
             let url = chatUrlMap.get(aiCloud);
-            let body = {"question": inputValue}
+            var modelSelect = document.getElementById(`model-select${aiCloud}`); // 获取下拉框元素
+            let body = {
+                "question": inputValue,
+                "model": modelSelect.value
+            }
+            let languageStart = false;
+            let bodyHtmlText = "";
+            let paragraph = "<p>";
             if (url != "") {
                 callAiCloudSSE(url, body, newAnswerNode, (node, msg) => {
                     if (typeof msg.type != "undefined") {
                         if (msg.type == "DATA") {
-                            node.innerHTML += msg.content;
+                            let match;
+                            if ((match = codeBlockStart.exec(msg.content)) !== null) {
+                                if (languageStart) {
+                                    bodyHtmlText += escapeHtml(msg.content);
+                                } else {
+                                    // 处理代码块
+                                    const language = match[1].trim();
+                                    bodyHtmlText = `<pre><code class="language-${language}">`;
+                                    languageStart = true;
+                                }
+                            } else if ((match = codeBlockEnd.exec(msg.content)) !== null) {
+                                bodyHtmlText += `</code></pre>`;
+                                node.innerHTML += bodyHtmlText;
+                                languageStart = false;
+                            } else {
+                                if (languageStart) {
+                                    if (msg.content != "") {
+                                        bodyHtmlText += escapeHtml(msg.content);
+                                    } else {
+                                        bodyHtmlText += "\n";
+                                    }
+                                } else {
+                                    if (msg.content != "") {
+                                        paragraph += innerCode(escapeHtml(msg.content));
+                                    } else {
+                                        paragraph += "</p>";
+                                        node.innerHTML += paragraph;
+                                        paragraph = "<p>";
+                                    }
+                                }
+                            }
                         } else if (msg.type == "END") {
                             console.log("响应返回结束");
                         } else {
@@ -279,6 +329,11 @@
             const processMessage = (reader) => {
                 reader.read().then(content => {
                     if (content.done) {
+                        // 结束之后主动换行完毕
+                        onMessage(node, {
+                            type: "DATA",
+                            content: ""
+                        });
                         onMessage(node, {
                             type: "END"
                         });
@@ -295,34 +350,34 @@
                         }
                     }
                     console.log(buffer);
-                    const lines = buffer.split('\n');
-                    lines.forEach(line => {
-                        if (line != "") {
-                            if (line.indexOf(":") > 0) {
-                                let [type] = line.split(":", 1);
-                                let subContent = line.substring(type.length + 1);
-                                if (type == 'data' && subContent != '') {
+                    const datas = buffer.split('data:');
+                    datas.forEach(oneData => {
+                        if (oneData != "") {
+                            let lines = oneData.replace(/(\n)+/g,'\n').split('\n');
+                            let startIndex = 0;
+                            lines.forEach(line => {
+                                if (startIndex == 0) {
+                                    if (line != "") {
+                                        onMessage(node, {
+                                            type: "DATA",
+                                            content: line
+                                        });
+                                    }
+                                } else {
+                                    // 不为空时先换行
+                                    if (line != "") {
+                                        onMessage(node, {
+                                            type: "DATA",
+                                            content: ""
+                                        });
+                                    }
+                                    // 数据显示
                                     onMessage(node, {
                                         type: "DATA",
-                                        content: subContent
-                                    });
-                                } else if (type == '' && subContent != '') { //服务端发送的注释，用于保证链接不断开
-                                    onMessage({
-                                        type: "COMMENT",
-                                        content: subContent
+                                        content: line
                                     });
                                 }
-                            } else { // 默认分行输出的内容 直接设定type为DATA
-                                onMessage(node, {
-                                    type: "DATA",
-                                    content: line
-                                });
-                            }
-                        } else {
-                            // 空行表示有换行
-                            onMessage(node, {
-                                type: "DATA",
-                                content: "<br/>"
+                                startIndex = 1;
                             });
                         }
                     });
@@ -357,6 +412,31 @@
                     window.scrollTo(0, scrollHeight - clientHeight);
                 }
             })();
+        }
+
+        function escapeHtml(html) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return html.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function innerCode(html) {
+            let match;
+            while ((match = innerCodeBlock.exec(html)) !== null) {
+                if (innerStart == 0) {
+                    html = html.replace("`", innerCodeStart);
+                    innerStart = 1;
+                } else {
+                    html = html.replace("`", innerCodeEnd);
+                    innerStart = 0;
+                }
+            }
+            return html;
         }
     });
 </script>
