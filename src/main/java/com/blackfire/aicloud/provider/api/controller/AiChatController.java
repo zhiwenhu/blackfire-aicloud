@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 @RestController
@@ -64,8 +65,26 @@ public class AiChatController extends AbstractController{
     @PostMapping(value = "/baidu", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public void baiduStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
         if (StringUtils.hasLength(quest.getQuestion())) {
-            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
-            baiduService.ernieBotTurboStream(quest, listener);
+//            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
+            rp.setCharacterEncoding("UTF-8");
+            rp.setHeader("Cache-Control", "no-cache");
+            rp.setHeader("connection", "keep-alive");
+            rp.setHeader("Access-Control-Allow-Origin", "*");  // 允许跨域
+            baiduService.ernieBotTurboStream(quest, rp);
+        } else {
+            throw new BusinessException("请输入你的问题。");
+        }
+    }
+
+    @PostMapping(value = "/baiduSse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter baiduSseEmitterStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
+        if (StringUtils.hasLength(quest.getQuestion())) {
+//            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
+            rp.setCharacterEncoding("UTF-8");
+            rp.setHeader("Cache-Control", "no-cache");
+            rp.setHeader("connection", "keep-alive");
+            rp.setHeader("Access-Control-Allow-Origin", "*");  // 允许跨域
+            return baiduService.ernieBotTurboStream(quest);
         } else {
             throw new BusinessException("请输入你的问题。");
         }
