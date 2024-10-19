@@ -124,7 +124,9 @@ public class BaiduService {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(responseInfo.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    rp.getWriter().write("data:" + JSON.parseObject(line).getString("result"));
+                    String resultData = JSON.parseObject(line).getString("result");
+                    if (resultData.isEmpty()) continue;;
+                    rp.getWriter().write("data:" + resultData);
                     rp.getWriter().flush();
                 }
             } catch (IOException e) {

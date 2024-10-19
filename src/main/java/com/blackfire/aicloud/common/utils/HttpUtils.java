@@ -65,7 +65,8 @@ public class HttpUtils {
             public void onEvent(@NotNull EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
                 super.onEvent(eventSource, id, type, data);
                 try {
-                    sseEmitter.send(JSON.parseObject(data).getString("result"));
+                    String resultData = JSON.parseObject(data).getString("result");
+                    if (!resultData.isEmpty()) sseEmitter.send(resultData);
                 } catch (IOException e) {
                     eventSource.cancel();
                     log.error("数据接收失败", e);
@@ -112,7 +113,8 @@ public class HttpUtils {
                 public void onEvent(@NotNull EventSource eventSource, @Nullable String id, @Nullable String type, @NotNull String data) {
                     super.onEvent(eventSource, id, type, data);
                     try {
-                        emitter.next(JSON.parseObject(data).getString("result"));
+                        String resultData = JSON.parseObject(data).getString("result");
+                        if (!resultData.isEmpty()) emitter.next(resultData);
                     } catch (Exception e) {
                         eventSource.cancel();
                         emitter.error(e);
