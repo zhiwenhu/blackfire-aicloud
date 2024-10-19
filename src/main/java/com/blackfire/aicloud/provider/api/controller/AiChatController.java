@@ -66,10 +66,6 @@ public class AiChatController extends AbstractController{
     public void baiduStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
         if (StringUtils.hasLength(quest.getQuestion())) {
 //            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
-            rp.setCharacterEncoding("UTF-8");
-            rp.setHeader("Cache-Control", "no-cache");
-            rp.setHeader("connection", "keep-alive");
-            rp.setHeader("Access-Control-Allow-Origin", "*");  // 允许跨域
             baiduService.ernieBotTurboStream(quest, rp);
         } else {
             throw new BusinessException("请输入你的问题。");
@@ -80,11 +76,17 @@ public class AiChatController extends AbstractController{
     public SseEmitter baiduSseEmitterStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
         if (StringUtils.hasLength(quest.getQuestion())) {
 //            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
-            rp.setCharacterEncoding("UTF-8");
-            rp.setHeader("Cache-Control", "no-cache");
-            rp.setHeader("connection", "keep-alive");
-            rp.setHeader("Access-Control-Allow-Origin", "*");  // 允许跨域
-            return baiduService.ernieBotTurboStream(quest);
+            return baiduService.sseEmitterPostStream(quest, rp);
+        } else {
+            throw new BusinessException("请输入你的问题。");
+        }
+    }
+
+    @PostMapping(value = "/baiduFlux", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> baiduFluxStream(@RequestBody @Validated ChatRequest quest, HttpServletResponse rp){
+        if (StringUtils.hasLength(quest.getQuestion())) {
+//            BaiduEventSourceListener listener = new BaiduEventSourceListener(rp);
+            return baiduService.fluxPostStream(quest, rp);
         } else {
             throw new BusinessException("请输入你的问题。");
         }

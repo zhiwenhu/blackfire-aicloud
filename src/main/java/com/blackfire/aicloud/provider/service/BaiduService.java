@@ -22,6 +22,7 @@ import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -102,7 +103,7 @@ public class BaiduService {
     // 该方法是通过流的方式请求API，大模型每生成一些字符，就会通过流的方式相应给客户端，
     // 我们是在 BaiduEventSourceListener.java 的 onEvent 方法中获取大模型响应的数据，其中data就是具体的数据，
     // 我们获取到数据之后，就可以通过 SSE/webscocket 的方式实时相应给前端页面展示
-    public void ernieBotTurboStream(ChatRequest question, HttpServletResponse httpServletResponse) {
+    public void ernieBotTurboStream(ChatRequest question, HttpServletResponse rp) {
         ErnieBotTurboStreamParam param = new ErnieBotTurboStreamParam();
         BaiduChatMessage userMsg = BaiduChatMessage.builder()
                 .role(Role.USER.getValue())
@@ -118,12 +119,13 @@ public class BaiduService {
                 requestUrl = AI_CHAT_URL.replace("{model}", question.getModel());
             }
             log.info("请求大数据AI url：{}", requestUrl);
+            HttpUtils.setHttpResponse(rp);
             HttpResponseInfo responseInfo = HttpUtils.sendSSLPostStream(requestUrl + getToken(appKey, secretKey), requestBody, null);
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(responseInfo.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    httpServletResponse.getWriter().write("data:" + JSON.parseObject(line).getString("result"));
-                    httpServletResponse.getWriter().flush();
+                    rp.getWriter().write("data:" + JSON.parseObject(line).getString("result"));
+                    rp.getWriter().flush();
                 }
             } catch (IOException e) {
                 log.error("数据解析失败！", e);
@@ -137,7 +139,7 @@ public class BaiduService {
         }
     }
 
-    public SseEmitter ernieBotTurboStream(ChatRequest question) {
+    public SseEmitter sseEmitterPostStream(ChatRequest question, HttpServletResponse rp) {
         ErnieBotTurboStreamParam param = new ErnieBotTurboStreamParam();
         BaiduChatMessage userMsg = BaiduChatMessage.builder()
                 .role(Role.USER.getValue())
@@ -153,7 +155,32 @@ public class BaiduService {
                 requestUrl = AI_CHAT_URL.replace("{model}", question.getModel());
             }
             log.info("请求大数据AI url：{}", requestUrl);
+            HttpUtils.setHttpResponse(rp);
             return HttpUtils.sseEmitterPostStream(requestUrl + getToken(appKey, secretKey), requestBody, null);
+        } catch (JsonProcessingException e) {
+            log.error("请求参数解析是失败！", e);
+            throw new RuntimeException("请求参数解析是失败！", e);
+        }
+    }
+
+    public Flux<String> fluxPostStream(ChatRequest question, HttpServletResponse rp) {
+        ErnieBotTurboStreamParam param = new ErnieBotTurboStreamParam();
+        BaiduChatMessage userMsg = BaiduChatMessage.builder()
+                .role(Role.USER.getValue())
+                .content(question.getQuestion())
+                .build();
+        param.setMessages(Collections.singletonList(userMsg));
+        param.setStream(true);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String requestBody = mapper.writeValueAsString(param);
+            String requestUrl = ERNIE_SPEED_INSTANT;
+            if (StringUtils.isNotBlank(question.getModel())) {
+                requestUrl = AI_CHAT_URL.replace("{model}", question.getModel());
+            }
+            log.info("请求大数据AI url：{}", requestUrl);
+            HttpUtils.setHttpResponse(rp);
+            return HttpUtils.fluxPostStream(requestUrl + getToken(appKey, secretKey), requestBody, null);
         } catch (JsonProcessingException e) {
             log.error("请求参数解析是失败！", e);
             throw new RuntimeException("请求参数解析是失败！", e);
