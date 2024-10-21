@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>黑火科技Ai Chat</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="./assets/img/favicon.ico">
+    <link rel="stylesheet" href="assets/libs/layui/css/layui.css">
+    <!--加载openlayers-->
+    <link rel="stylesheet" href="assets/libs/v5.3.0/ol.css" />
+    <!--遮罩-->
+    <link rel="stylesheet" href="assets/css/loading.css"/>
+    <style>
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ccc;
+            overflow-x: auto; /* 允许横向滚动 */
+        }
+    </style>
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs layui-bg-black">AI Cloud</div>
+        <!-- 头部区域（可配合layui 已有的水平导航） -->
+        <ul id="chatLayout" class="layui-nav layui-layout-left">
+            <!-- 移动端显示 -->
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(1)"><a href="javascript:;">ChatGPT</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(2)"><a href="javascript:;">通义千问</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(3)"><a href="javascript:;">讯飞星火</a></li>
+            <li class="layui-nav-item layui-hide-xs" onclick="selectAi(4)"><a href="javascript:;">文心一言</a></li>
+        </ul>
+        <ul id="discussLayout" class="layui-nav layui-layout-left" style="display: none">
+            <!-- 移动端显示 -->
+            <li class="layui-nav-item layui-show-xs-inline-block layui-hide-sm" lay-header-event="menuLeft">
+                <i class="layui-icon layui-icon-spread-left"></i>
+            </li>
+            <li class="layui-nav-item layui-hide-xs"><a href="javascript:;">推荐</a></li>
+            <li class="layui-nav-item layui-hide-xs"><a href="javascript:;">最新</a></li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item layui-show-sm-inline-block">
+                <a id="myInfoName"  href="javascript:;">
+                    <img src="assets/images/icon-v2.png" class="layui-nav-img">
+                    <cite>{{username}}</cite>
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a id="setInfo" href="javascript:;">Your Profile</a></dd>
+                    <dd><a id="setPsw" href="javascript:;">Reset Password</a></dd>
+                    <dd><a id="btnLogout" href="javascript:;">Sign out</a></dd>
+                </dl>
+            </li>
+            <li class="layui-nav-item" lay-header-event="menuRight" lay-unselect>
+                <a href="javascript:;">
+                    <i class="layui-icon layui-icon-more-vertical"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+            <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">AI工具箱</a>
+                    <dl class="layui-nav-child">
+                        <dd id="chat-left-menu"><a href="javascript:;" lay-menu-show="aiChat">会话</a></dd>
+                        <dd><a href="javascript:;" lay-menu-show="aiPhoto">图片</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item"><a href="javascript:;" lay-menu-show="discuss">话题讨论</a></li>
+                <li class="layui-nav-item"><a href="javascript:;" lay-menu-show="about">关于</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body" id="main-body">
+        <!-- 内容主体区域 -->
+        <div style="padding: 15px 15px 55px;" id="questionAndAnswer" >
+            <blockquote class="layui-elem-quote layui-text">
+                这是一个AI Chat应用，请输入你想要查询的信息。
+            </blockquote>
+        </div>
+        <div style="padding: 15px; display: none" id="discussBody">
+        </div>
+    </div>
+    <div id= "layout-footer" class="layui-footer" style="height: 55px;line-height: 55px;vertical-align: center" >
+        <div class="layui-input-group" style="width: 90%;">
+            <div style="width: 140px">
+                <select class="layui-select"  id="model-select1" style="width: fit-content" >
+                    <option value="gpt-4.0-turbo">gpt-4.0-turbo</option>
+                </select>
+                <select class="layui-select" id="model-select2" style="width: fit-content; display: none" >
+                    <option value="qwen-turbo">qwen-turbo</option>
+                </select>
+                <select class="layui-select" id="model-select3" style="width: fit-content; display: none" >
+                    <option value="generalv3.5">generalv3.5</option>
+                </select>
+                <select class="layui-select" id="model-select4" style="width: fit-content; display: none" >
+                    <option value="ernie-speed-128k">ernie-speed-128k</option>
+                    <option value="yi_34b_chat">yi_34b_chat</option>
+                    <option value="ernie-lite-8k">ernie-lite-8k</option>
+                </select>
+            </div>
+            <div class="layui-input-inline layui-input-wrap">
+                <input id="questionText" class="layui-input" type="text" placeholder="输入你想问的问题" style="width: 100%;"/>
+            </div>
+            <div class="layui-input-suffix" style="margin-left: 10px;width: 40px" >
+                <button class="layui-btn layui-btn-normal layui-btn-radius" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+    <!-- 手机屏幕遮罩层 -->
+    <div class="site-mobile-shade"></div>
+    <!--loading框-->
+    <div id="loading" style="backgroud:black;">
+        <div class="box" id="loading-box">
+            <p class="title"><span id="loading-software-name"></span> <span id="loading-lang-init"></span></p>
+            <p id="on-load-file-name">...</p>
+            <div class="circle-box">
+                <div class="circle"></div>
+                <div id="text-percent">0</div>
+                <div class="mask right">
+                    <div id="loading-right" class="circle right"></div>
+                </div>
+                <div class="mask left">
+                    <div id="loading-left" class="circle left"></div>
+                </div>
+            </div>
+        </div>
+        <p id="loading-powered-by" style="color:#ffffff;font-size: 16px;"></p>
+    </div>
+</div>
+<script src="assets/libs/layui/layui.js"></script>
+<script type="text/javascript" src="assets/libs/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="assets/libs/viewer-jquery.min.js"></script>
+<script type="text/javascript" src="assets/libs/pandyle.min.js"></script>
+<script>
+    var aiCloud = 1;
+    // 会话图片标志 0:会话 1:图片,
+    // 前一次，本次
+    var chatPhoto = [0, 0];
+
+    // chat聊天地址Map
+    const chatUrlMap = new Map();
+    chatUrlMap.set(1, 'chat/openai');
+    chatUrlMap.set(2, 'chat/ali/stream');
+    chatUrlMap.set(3, 'chat/xunfei');
+    chatUrlMap.set(4, 'chat/baidu');
+    const chatHistoryMap = new Map();
+    const photoHistoryMap = new Map();
+    //JS
+    layui.config({
+        base: 'assets/js/'
+    }).use(['element', 'layer', 'util', 'element', 'jquery','myConfig','admin','index'], function(){
+        var form = layui.form;
+        var layer = layui.layer;
+        var util = layui.util;
+        var $ = layui.$;
+        var jQuery = layui.jquery;
+        let config = layui.myConfig;
+        let element = layui.element;
+        let admin = layui.admin;
+        let index = layui.index;
+        const codeBlockStart = /^```([\w\s]+)/g;
+        const codeBlockEnd = /```$/g;
+        const innerCodeStart = `<code class="inline">`;
+        const innerCodeEnd = `</code>`;
+        const innerCodeBlock = /`[^`]*/;
+        let innerStart = 0;
+
+        // 检查是否登录
+        if (!config.getToken() || config.getToken() == '') {
+            location.replace('index.html');
+            return;
+        }
+        // 获取当前用户信息
+        let loadUser = function () {
+            index.getUser(function (user) {
+                $('.layui-layout-admin .layui-header').vm(user);
+                index.bindEvent();
+
+                // 添加水印
+                //admin.addWater();
+            });
+        };
+        // 等待遮罩
+        function loader() {
+            let that = this;
+            let counterLoad = 0, maxLoad = 17; //资源加载计数器||延迟 17
+            let onLoading = "...";
+            //加载提示框
+            let flagFifty = false;//解决圆环动画断裂
+            let itvLoading = setInterval(function () {
+                let percent = parseInt(counterLoad / maxLoad * 100);
+                document.getElementById('text-percent').innerHTML = percent + "%";
+                //loading动画
+                let deg = percent * 3.6;
+                let degRight = deg - 180;
+                if (degRight > 0) {
+                    degRight = 0
+                }
+                if (!flagFifty && percent >= 50) {
+                    setTimeout(function () {
+                        flagFifty = true;
+                    }, 230);
+                }
+                let degLeft = deg - 360;
+                if (degLeft < -180) {
+                    degLeft = -180;
+                }
+                if (flagFifty) document.getElementById('loading-left').style.transform = 'rotate(' + degLeft + 'deg)';
+                document.getElementById('loading-right').style.transform = 'rotate(' + degRight + 'deg)';
+            }, 200);
+
+            document.getElementById('loading-box').style.display = 'block';
+            document.getElementById('on-load-file-name').innerHTML = "Loading";
+
+            document.getElementById('loading-lang-init').innerHTML = '微服务框架';
+            document.getElementById('loading-powered-by').innerHTML = "黑火科技";
+            //延迟
+            let loadingFiles = setInterval(function(){
+                counterLoad ++;
+                if(counterLoad == maxLoad){ //定义24
+                    clearInterval(loadingFiles);
+                }
+            }, 120);
+            /**  /加载资源 */
+            let loadAt = Date.now();
+            // 加载用户信息
+            loadUser();
+            let animation = setInterval(function () {
+                let isFastLoad = Date.now() - loadAt < 500;
+                if (!isFastLoad) document.getElementById("loading").style.opacity = 1;
+                if (counterLoad === maxLoad) {
+                    onLoading = 'Complete';
+                    clearInterval(animation);
+                    setTimeout(function () {
+                        //执行onload
+                        clearInterval(itvLoading);
+                        $("#loading").remove()
+                        $("#mainDiv").removeClass("itemBackGround");
+                    }, isFastLoad ? 0 : 200);
+                }
+            }, 100);
+        }
+
+        loader();
+
+        //头部事件
+        util.event('lay-header-event', {
+            menuLeft: function(othis){ // 左侧菜单事件
+                layer.msg('展开左侧菜单的操作', {icon: 0});
+            },
+            menuRight: function(){  // 右侧菜单事件
+                layer.open({
+                    type: 1,
+                    title: '更多',
+                    content: '<div style="padding: 15px;" class="layui-icon-link"><a href="https://openai.com/chatgpt/" target="_blank" style="color:darkorange;">ChatGPT</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://tongyi.aliyun.com/qianwen/" target="_blank" style="color:#0d408e;">通义千问</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://xinghuo.xfyun.cn/" target="_blank" style="color:cadetblue;">讯飞星火</a></div>' +
+                        '<div style="padding: 15px;" class="layui-icon-link"><a href="https://yiyan.baidu.com/welcome" target="_blank" style="color:chocolate;">文心一言</a></div>',
+                    area: ['260px', '100%'],
+                    offset: 'rt', // 右上角
+                    anim: 'slideLeft', // 从右侧抽屉滑出
+                    shadeClose: true,
+                    scrollbar: false
+                });
+            }
+        });
+        // 左侧菜单选择
+        util.event('lay-menu-show', {
+            aiChat: function(){
+                chatPhoto[0] = chatPhoto[1];
+                chatPhoto[1] = 0;
+                generateBody(aiCloud)
+            },
+            aiPhoto: function(){
+                chatPhoto[0] = chatPhoto[1];
+                chatPhoto[1] = 1;
+                generateBody(aiCloud)
+            },
+            discuss : function(){
+                initDiscuss();
+            }
+        });
+
+        $('#sendButton').click(function () {
+            let inputValue = jQuery("#questionText").val();
+            if (inputValue.trim() === '') {
+                layer.msg('请输入您想要查询的问题', {icon: 5, time: 2000});
+                $('#questionText').val('');
+                return;
+            }
+            let questionAnswer = document.createElement('div');
+            questionAnswer.classList.add("layui-card");
+            questionAnswer.classList.add("layui-panel");
+            questionAnswer.style.marginBottom = "auto"
+            questionAnswer.insertAdjacentHTML('afterbegin', '<div class="layui-card-header layui-font-16"><b>' + inputValue + '</b></div>');
+            $('#questionAndAnswer').append(questionAnswer);
+            let newAnswerNode = document.createElement('div');
+            newAnswerNode.classList.add("layui-card-body");
+            questionAnswer.append(newAnswerNode);
+            let url = chatUrlMap.get(aiCloud);
+            var modelSelect = document.getElementById(`model-select${aiCloud}`); // 获取下拉框元素
+            let body = {
+                "question": inputValue,
+                "model": modelSelect.value
+            }
+            let languageStart = false;
+            let bodyHtmlText = "";
+            let paragraph = "<p>";
+            if (url != "") {
+                callAiCloudSSE(url, body, newAnswerNode, (node, msg) => {
+                    if (typeof msg.type != "undefined") {
+                        if (msg.type == "DATA") {
+                            let match;
+                            if ((match = codeBlockStart.exec(msg.content)) !== null) {
+                                if (languageStart) {
+                                    bodyHtmlText += escapeHtml(msg.content);
+                                } else {
+                                    // 处理代码块
+                                    const language = match[1].trim();
+                                    bodyHtmlText = `<pre><code class="language-${language}">`;
+                                    languageStart = true;
+                                }
+                            } else if ((match = codeBlockEnd.exec(msg.content)) !== null) {
+                                bodyHtmlText += `</code></pre>`;
+                                node.innerHTML += bodyHtmlText;
+                                languageStart = false;
+                            } else {
+                                if (languageStart) {
+                                    if (msg.content != "") {
+                                        bodyHtmlText += escapeHtml(msg.content);
+                                    } else {
+                                        bodyHtmlText += "\n";
+                                    }
+                                } else {
+                                    if (msg.content != "") {
+                                        paragraph += innerCode(escapeHtml(msg.content));
+                                    } else {
+                                        paragraph += "</p>";
+                                        node.innerHTML += paragraph;
+                                        paragraph = "<p>";
+                                    }
+                                }
+                            }
+                        } else if (msg.type == "END") {
+                            console.log("响应返回结束");
+                        } else {
+                            node.innerHTML += msg.content;
+                            console.log(msg);
+                        }
+                    }
+                    scrollBottom();
+                })
+            }
+            $('#questionText').val('');
+            $('#questionText').focus();
+        });
+
+        // 讨论组信息查询初期化
+        function initDiscuss() {
+            $("#chatLayout").hide();
+            $("#discussLayout").show();
+            $('#questionAndAnswer').hide();
+            $('#layout-footer').hide();
+            $('#discussBody').show();
+            if (!jQuery("#discussLayout").find("li").hasClass("layui-this")) {
+                jQuery("#discussLayout").find("li").eq(1).addClass("layui-this");
+            }
+        }
+
+        window.selectAi = function(aiType) {
+            chatPhoto[0] = chatPhoto[1];
+            generateBody(aiType)
+        }
+        function generateBody(aiType) {
+            $("#chatLayout").show();
+            $("#discussLayout").hide();
+            $('#questionAndAnswer').show();
+            $('#layout-footer').show();
+            $('#discussBody').hide();
+
+            if (aiCloud != aiType || chatPhoto[0] != chatPhoto[1]) {
+                // 清除非本AI结果记录
+                var bodyElement = document.getElementById('questionAndAnswer');
+                var firstNode = bodyElement.firstElementChild;
+                // 历史记录保存
+                if (chatPhoto[0] == 0) {
+                    chatHistoryMap.set(aiCloud, bodyElement.innerHTML);
+                } else {
+                    photoHistoryMap.set(aiCloud, bodyElement.innerHTML);
+                }
+
+                bodyElement.innerHTML = "";
+
+                if (chatPhoto[1] == 0) {
+                    // 历史记录还原
+                    if (chatHistoryMap.has(aiType))  {
+                        bodyElement.innerHTML = chatHistoryMap.get(aiType);
+                    } else {
+                        firstNode.innerHTML = "这是一个AI Chat应用，请输入你想要查询的信息。";
+                        bodyElement.append(firstNode);
+                    }
+                } else {
+                    // 历史记录还原
+                    if (photoHistoryMap.has(aiType))  {
+                        bodyElement.innerHTML = photoHistoryMap.get(aiType);
+                    } else {
+                        firstNode.innerHTML = "这是一个AI 绘图 应用，请输入想要生成图片相关的关键字。";
+                        bodyElement.append(firstNode);
+                    }
+                }
+            }
+            aiCloud = aiType;
+            modelList();
+        }
+        function modelList() {
+            $("#model-select1").hide();
+            $("#model-select2").hide();
+            $("#model-select3").hide();
+            $("#model-select4").hide();
+            if (aiCloud == 1) {
+                $("#model-select1").show();
+            } else if (aiCloud == 2) {
+                $("#model-select2").show();
+            } else if (aiCloud == 3) {
+                $("#model-select3").show();
+            } else if (aiCloud == 4) {
+                $("#model-select4").show();
+            }
+        }
+
+        function isJson(str) {
+            if (typeof str == 'string') {
+                try {
+                    var obj=JSON.parse(str);
+                    if(typeof obj == 'object' && obj ){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                } catch(e) {
+                    return false;
+                }
+            }
+        }
+        function callAiCloudSSE(url, body, node,  onMessage) {
+            const decoder = new TextDecoder("utf-8");
+            let buffer = '';
+            const processMessage = (reader) => {
+                reader.read().then(content => {
+                    if (content.done) {
+                        // 结束之后主动换行完毕
+                        onMessage(node, {
+                            type: "DATA",
+                            content: ""
+                        });
+                        onMessage(node, {
+                            type: "END"
+                        });
+                        return;
+                    }
+                    buffer = decoder.decode(content.value, {stream: !content.done});
+                    if (isJson(buffer)) {
+                        if (JSON.parse(buffer).hasOwnProperty("msg") && JSON.parse(buffer).hasOwnProperty("code")) {
+                            onMessage(node, {
+                                type: "ERROR",
+                                content: JSON.parse(buffer).msg
+                            });
+                            return;
+                        }
+                    }
+                    console.log(buffer);
+                    const datas = buffer.split('data:');
+                    datas.forEach(oneData => {
+                        if (oneData != "") {
+                            let lines = oneData.replace(/(\n)+/g,'\n').split('\n');
+                            let startIndex = 0;
+                            lines.forEach(line => {
+                                if (startIndex == 0) {
+                                    if (line != "") {
+                                        onMessage(node, {
+                                            type: "DATA",
+                                            content: line
+                                        });
+                                    }
+                                } else {
+                                    // 不为空时先换行
+                                    if (line != "") {
+                                        onMessage(node, {
+                                            type: "DATA",
+                                            content: ""
+                                        });
+                                    }
+                                    // 数据显示
+                                    onMessage(node, {
+                                        type: "DATA",
+                                        content: line
+                                    });
+                                }
+                                startIndex = 1;
+                            });
+                        }
+                    });
+
+                    if (!content.done) {
+                        processMessage(reader);
+                    }
+                })
+            }
+            fetch(`${url}`, {
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                method: "POST",
+                body: JSON.stringify(body)
+            })
+                .then(response => response.body.getReader())
+                .then(reader => processMessage(reader))
+                .catch(error => onMessage(node, {
+                    type: "ERROR",
+                    content: error
+                }));
+        }
+
+        function scrollBottom() {
+            (function smoothscroll() {
+                const currentScroll = document.documentElement.scrollTop || document.body.scrollTop; // 已经被卷掉的高度
+                const clientHeight = document.documentElement.clientHeight; // 浏览器高度
+                const scrollHeight = document.documentElement.scrollHeight; // 总高度
+                if (scrollHeight - 10 > currentScroll + clientHeight) {
+                    window.requestAnimationFrame(smoothscroll);
+                    window.scrollTo(0, scrollHeight - clientHeight);
+                }
+            })();
+        }
+
+        function escapeHtml(html) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return html.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function innerCode(html) {
+            let match;
+            while ((match = innerCodeBlock.exec(html)) !== null) {
+                if (innerStart == 0) {
+                    html = html.replace("`", innerCodeStart);
+                    innerStart = 1;
+                } else {
+                    html = html.replace("`", innerCodeEnd);
+                    innerStart = 0;
+                }
+            }
+            return html;
+        }
+
+        // 选择菜单初期化
+        $("#chatLayout").find("li").removeClass("layui-this");
+        $("#chatLayout").find("li").eq(1).addClass("layui-this");
+        $("#chat-left-menu").addClass("layui-this");
+    });
+</script>
+</body>
+</html>

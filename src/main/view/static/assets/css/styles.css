@@ -92,15 +92,16 @@ body .login
   position: relative;
   width: 240px;
   /*border-top: 2px solid #D8312A;*/
-  height: 300px;
+  height: 365px;
   position: absolute;
   left: 0;
   right: 0;
   margin: auto;
   top: 0;
   bottom: 0;
-  padding: 100px 40px 40px 40px;
+  padding: 10px 40px;
   background: #35394a;
+
   /* Old browsers */
   /* FF3.6+ */
   background: -webkit-gradient(linear, left bottom, right top, color-stop(0%, #35394a), color-stop(100%, rgb(0, 0, 0)));
@@ -117,21 +118,16 @@ body .login
 body .login .validation {
   position: absolute;
   z-index: 1;
-  right: 10px;
+  margin-right: 10px;
   top: 14px;
   opacity: 0;
 }
-body .login .disclaimer {
-  position: absolute;
-  bottom: 20px;
-  left: 35px;
-  width: 250px;
-}
 body .login_title {
-  color: #D3D7F7;
-  height: 60px;
-  text-align: left;
-  font-size: 16px;
+  color: white;
+  line-height: 100px;
+  text-align: center;
+  font-size: 38px;
+  font-weight: bold;
 }
 body .login_fields {
   height: 208px;
@@ -146,7 +142,7 @@ body .login_fields .icon {
   opacity: .5;
 }
 body .login_fields input[type='password'],body .login_fields input[type='text'] {
-  color: #61BFFF !important;
+  color: #fff !important;
 }
 body .login_fields input[type='text'], body .login_fields input[type='password'] {
   color: #afb1be;
@@ -174,6 +170,16 @@ body .login_fields__submit {
   right: 0;
   margin: auto;
 }
+
+body .login_fields__signUp {
+  position: relative;
+  margin-top: 20px;
+  padding: 20px 10px 20px 0px;
+  width: 80%;
+  margin-left: 30px;
+  color: #D3D7F7;
+}
+
 body .login_fields__submit .forgot {
   float: right;
   font-size: 10px;
