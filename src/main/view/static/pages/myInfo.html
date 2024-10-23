@@ -1,5 +1,6 @@
 <form id="user-form" lay-filter="user-form" class="layui-form model-form">
     <input name="id" type="hidden"/>
+    <input name="username" type="hidden"/>
     <div class="layui-form-item">
         <label class="layui-form-label">用户名</label>
         <div class="layui-input-block">
@@ -94,7 +95,7 @@
                 layer.closeAll('loading');
                 console.log(data);
                 $("[name=headImgUrl]").val(data.url);
-                layer.msg("上传成功", {icon: 1, time: 500});
+                layer.msg(data.msg, {icon: 1, time: 500});
             },
             error: function (data) {
                 layer.closeAll('loading', {icon: 2, time: 500});
