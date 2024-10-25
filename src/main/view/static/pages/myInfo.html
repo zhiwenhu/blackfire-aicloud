@@ -66,11 +66,14 @@
                 if (data.statusCodeValue == 0) {
                     layer.closeAll('loading');
                     $(".layui-nav-img").attr("src",$("[name=headImgUrl]").val());
-                    layer.msg("操作成功", {icon: 1, time: 500});
-
+                    layer.msg("操作成功", {icon: 1, time: 600}, function (){
+                        layer.closeAll('page');
+                    });
                     form.val('user-form',data.data);
                 } else {
-                    layer.msg(data.msg, {icon: 2, time: 500});
+                    layer.msg(data.msg, {icon: 2, time: 600}, function (){
+                        layer.closeAll('page');
+                    });
                 }
             }, 'POST');
             return false;
@@ -95,7 +98,11 @@
                 layer.closeAll('loading');
                 console.log(data);
                 $("[name=headImgUrl]").val(data.url);
-                layer.msg(data.msg, {icon: 1, time: 500});
+                if (data.msg) {
+                    layer.msg("上传失败", {icon: 2, time: 1000, area: ['200px', '100px']});
+                } else {
+                    layer.msg("上传成功", {icon: 1, time: 500 });
+                }
             },
             error: function (data) {
                 layer.closeAll('loading', {icon: 2, time: 500});
