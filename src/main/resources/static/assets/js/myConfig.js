@@ -1,20 +1,10 @@
-layui.define(function (exports) {
+layui.define(['apiUrl'], function (exports) {
     /**
      * 用于动态切换环境地址
      */
-    //默认地址
-    var defUrl = 'http://127.0.0.1:9900/';
     //当前环境的api地址
-    var apiUrl;
-    try{
-        if (my_api_server_url.length > 0) {
-            apiUrl = my_api_server_url;
-        } else {
-            apiUrl = defUrl;
-        }
-    } catch(e) {
-        apiUrl = defUrl;
-    }
+    var apiUrlModule = layui.apiUrl;
+    var apiUrl = apiUrlModule.url || 'http://127.0.0.1:9900/';
     var config = {
         base_server: apiUrl,
         tableName: 'easyweb',  // 存储表名
